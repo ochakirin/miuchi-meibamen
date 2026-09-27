@@ -1,1 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>クリップ集</title>
+  <style>
+    body { display: flex; font-family: sans-serif; }
+    #list-container { width: 300px; height: 100vh; overflow-y: auto; border-right: 1px solid #ccc; padding: 10px; }
+    #player-container { flex-grow: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    .clip-item { padding: 10px; margin-bottom: 5px; background: #f0f0f0; cursor: pointer; border-radius: 4px; }
+    .clip-item:hover { background: #e0e0e0; }
+    iframe { width: 100%; max-width: 800px; height: 450px; border: none; }
+  </style>
+</head>
+<body>
 
+  <div id="list-container">
+    <h2>投稿リスト</h2>
+    <div id="clips">読み込み中...</div>
+  </div>
+
+  <div id="player-container">
+    <h2 id="now-playing-title">クリップを選択してください</h2>
+    <p id="now-playing-info"></p>
+    <div id="video-wrapper"></div>
+  </div>
+
+  <script>
+    // 1. GASで発行したウェブアプリのURLをここに貼る
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxULFYIUuTHznFvdwXSQHChJfCAm9dLSGJddGQ_WwkqoPX-X_lSz3dvXgr6vYGMdzeH5Q/exec';
+    
+    // 2. GitHub Pagesのドメイン名を指定（Twitch埋め込みに必須）
+    // 例: 'username.github.io' （ローカルテスト時は 'localhost' を追加など）
+    const SITE_DOMAIN = 'YOUR_GITHUB_DOMAIN.github.io'; 
+
+    async function fetchData() {
+      try {
+        const response = await fetch(GAS_URL);
+        const data = await response.json();
+        renderList(data);
+      } catch (error) {
+        document.getElementById('clips').innerText = 'データの取得に失敗しました。';
+      }
+    }
+
+    function renderList(data) {
+      const clipsDiv = document.getElementById('clips');
+      clipsDiv.innerHTML = ''; // クリア
+
+      // データの新しい順（下から上）に表示する場合は data.reverse() を挟む
+      data.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'clip-item';
+        // フォームの実際の列名（ヘッダー）に合わせてプロパティを変更してください
+        div.innerHTML = `<strong>${item['タイトル']}</strong><br>${item['チーム名']} / ${item['走者名']}`;
+        
+        div.onclick = () => playVideo(item['クリップURL'], item['タイトル'], item['走者名']);
+        clipsDiv.appendChild(div);
+      });
+    }
+
+    function playVideo(url, title, runner) {
+      document.getElementById('now-playing-title').innerText = title;
+      document.getElementById('now-playing-info').innerText = `走者: ${runner}`;
+      
+      const embedUrl = getEmbedUrl(url);
+      const wrapper = document.getElementById('video-wrapper');
+      
+      if (embedUrl) {
+        wrapper.innerHTML = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
+      } else {
+        wrapper.innerHTML = `<p>対応していないURLです: <a href="${url}" target="_blank">${url}</a></p>`;
+      }
+    }
+
+    function getEmbedUrl(rawUrl) {
+      // Twitchクリップの処理
+      // 例: https://clips.twitch.tv/AbcDefGhi または https://www.twitch.tv/channel/clip/AbcDefGhi
+      if (rawUrl.includes('twitch.tv')) {
+        const twitchMatch = rawUrl.match(/(?:clips\.twitch\.tv\/|clip\/)([^/?]+)/);
+        if (twitchMatch) {
+          const clipId = twitchMatch[1];
+          return `https://clips.twitch.tv/embed?clip=${clipId}&parent=${SITE_DOMAIN}&autoplay=false`;
+        }
+      }
+      
+      // YouTubeの処理 (通常の動画URL、短縮URLに対応)
+      // クリップ(youtube.com/clip/...) は通常のiframe埋め込みが不安定なため、
+      // 投稿者に「共有 > 埋め込む」の動画URLを貼ってもらうか、元の動画IDを抽出します。
+      if (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')) {
+        const ytMatch = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+        if (ytMatch) {
+          const videoId = ytMatch[1];
+          return `https://www.youtube.com/embed/${videoId}`;
+        }
+        
+        // YouTubeクリップURL（youtube.com/clip/xxx）の簡易対応
+        if (rawUrl.includes('/clip/')) {
+           // YouTubeクリップはそのまま埋め込むか、別途APIで元動画IDを引く必要があります。
+           // 手軽な回避策としてはURLをそのまま返す等ですが、iframeエラーになる確率が高いです。
+        }
+      }
+      return null;
+    }
+
+    // 初期化
+    fetchData();
+  </script>
+</body>
+</html>
