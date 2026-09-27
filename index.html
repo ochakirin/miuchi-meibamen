@@ -3,13 +3,81 @@
 <head>
   <meta charset="UTF-8">
   <title>クリップ集</title>
-  <style>
-    body { display: flex; font-family: sans-serif; }
-    #list-container { width: 300px; height: 100vh; overflow-y: auto; border-right: 1px solid #ccc; padding: 10px; }
-    #player-container { flex-grow: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-    .clip-item { padding: 10px; margin-bottom: 5px; background: #f0f0f0; cursor: pointer; border-radius: 4px; }
+<style>
+    /* 全体のレイアウト設定 */
+    body { 
+      display: flex; 
+      font-family: sans-serif;
+      margin: 0;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+    
+    /* 左側のリスト部分 */
+    #list-container { 
+      width: 300px; 
+      height: 100vh; 
+      overflow-y: auto; 
+      border-right: 1px solid #ccc; 
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    
+    /* 右側のプレイヤー部分 */
+    #player-container { 
+      flex-grow: 1; 
+      padding: 20px; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+
+    /* 投稿アイテムのデザイン */
+    .clip-item { 
+      padding: 10px; 
+      margin-bottom: 5px; 
+      background: #f0f0f0; 
+      cursor: pointer; 
+      border-radius: 4px; 
+    }
     .clip-item:hover { background: #e0e0e0; }
-    iframe { width: 100%; max-width: 800px; height: 450px; border: none; }
+
+    /* 💡 動画ラッパーで16:9を強制する */
+    #video-wrapper {
+      width: 100%;
+      max-width: 800px; /* PCなどでの最大幅 */
+      aspect-ratio: 16 / 9; /* 常に16:9を維持 */
+      background-color: #000; /* 動画読み込み前の黒背景 */
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* iframeはラッパーに100%フィットさせる */
+    iframe { 
+      width: 100%; 
+      height: 100%; 
+      border: none; 
+      display: block;
+    }
+
+    /* 💡 スマホ向け（画面幅が768px以下）のレスポンシブ対応 */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column; /* 縦並びに変更 */
+      }
+      #player-container {
+        height: 50vh; /* 上半分をプレイヤーに */
+        padding: 10px;
+      }
+      #list-container {
+        width: 100%;
+        height: 50vh; /* 下半分をリストに */
+        border-right: none;
+        border-top: 1px solid #ccc;
+      }
+    }
   </style>
 </head>
 <body>
