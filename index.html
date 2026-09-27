@@ -135,7 +135,8 @@
       }
     }
 
-    function getEmbedUrl(rawUrl) {
+function getEmbedUrl(rawUrl) {
+      // Twitchクリップの処理
       if (rawUrl.includes('twitch.tv')) {
         const twitchMatch = rawUrl.match(/(?:clips\.twitch\.tv\/|clip\/)([^/?]+)/);
         if (twitchMatch) {
@@ -144,11 +145,40 @@
         }
       }
       
+      // YouTubeの処理 (通常、短縮、ライブアーカイブに対応)
       if (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')) {
-        const ytMatch = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+        // 正規表現に「live/」を追加しました
+        const ytMatch = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|live\/))([^&?]+)/);
+        
         if (ytMatch) {
           const videoId = ytMatch[1];
-          return `https://www.youtube.com/embed/${videoId}`;
+          let embedSrc = `https://www.youtube.com/embed/${videoId}`;
+          
+          // 開始時間（t=〇〇）のパラメータが付いているかチェック
+          const timeMatch = rawUrl.match(/[?&]t=([^&]+)/);
+          if (timeMatch) {
+            let timeStr = timeMatch[1];
+            let startSeconds = 0;
+            
+            // 「t=16000」のように秒数だけの場合
+            if (/^\d+(s)?$/.test(timeStr)) {
+              startSeconds = parseInt(timeStr, 10);
+            } 
+            // 「t=1h2m3s」のように「時・分・秒」が入っている場合
+            else {
+              let h = timeStr.match(/(\d+)h/) ? parseInt(timeStr.match(/(\d+)h/)[1]) : 0;
+              let m = timeStr.match(/(\d+)m/) ? parseInt(timeStr.match(/(\d+)m/)[1]) : 0;
+              let s = timeStr.match(/(\d+)s/) ? parseInt(timeStr.match(/(\d+)s/)[1]) : 0;
+              startSeconds = (h * 3600) + (m * 60) + s;
+            }
+
+            // iframeの仕様に合わせて ?start=秒数 を末尾につける
+            if (startSeconds > 0) {
+              embedSrc += `?start=${startSeconds}`;
+            }
+          }
+          
+          return embedSrc;
         }
       }
       return null;
