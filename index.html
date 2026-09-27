@@ -3,15 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>クリップ集</title>
-<style>
-    /* 全体のレイアウト設定 */
-    body { 
-      display: flex; 
-      font-family: sans-serif;
-      margin: 0;
-      height: 100vh;
-      box-sizing: border-box;
-    }
+  <style>
+    body { display: flex; font-family: sans-serif; margin: 0; }
     
     /* 左側のリスト部分 */
     #list-container { 
@@ -19,22 +12,9 @@
       height: 100vh; 
       overflow-y: auto; 
       border-right: 1px solid #ccc; 
-      padding: 10px;
+      padding: 10px; 
       box-sizing: border-box;
     }
-    
-    /* 右側のプレイヤー部分 */
-    #player-container { 
-      flex-grow: 1; 
-      padding: 20px; 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      overflow-y: auto;
-      box-sizing: border-box;
-    }
-
-    /* 投稿アイテムのデザイン */
     .clip-item { 
       padding: 10px; 
       margin-bottom: 5px; 
@@ -44,39 +24,40 @@
     }
     .clip-item:hover { background: #e0e0e0; }
 
-    /* 💡 動画ラッパーで16:9を強制する */
-    #video-wrapper {
+    /* 右側のプレイヤー部分 */
+    #player-container { 
+      flex-grow: 1; 
+      padding: 20px; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+    }
+    
+    /* 備考欄のスタイル */
+    #now-playing-remarks {
+      white-space: pre-wrap; /* フォームの改行をそのまま表示する */
+      background-color: #f9f9f9;
+      padding: 10px;
+      border-radius: 4px;
       width: 100%;
-      max-width: 800px; /* PCなどでの最大幅 */
-      aspect-ratio: 16 / 9; /* 常に16:9を維持 */
-      background-color: #000; /* 動画読み込み前の黒背景 */
-      border-radius: 8px;
-      overflow: hidden;
+      max-width: 800px;
+      color: #333;
+      margin-bottom: 20px;
+      display: none; /* 初期状態や備考が空の場合は隠す */
     }
 
-    /* iframeはラッパーに100%フィットさせる */
-    iframe { 
-      width: 100%; 
-      height: 100%; 
-      border: none; 
+    /* 動画の16:9 枠 */
+    #video-wrapper {
+      width: 100%;            
+      max-width: 800px;       
+      aspect-ratio: 16 / 9;   
+      background-color: #000; 
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
       display: block;
-    }
-
-    /* 💡 スマホ向け（画面幅が768px以下）のレスポンシブ対応 */
-    @media (max-width: 768px) {
-      body {
-        flex-direction: column; /* 縦並びに変更 */
-      }
-      #player-container {
-        height: 50vh; /* 上半分をプレイヤーに */
-        padding: 10px;
-      }
-      #list-container {
-        width: 100%;
-        height: 50vh; /* 下半分をリストに */
-        border-right: none;
-        border-top: 1px solid #ccc;
-      }
     }
   </style>
 </head>
@@ -90,6 +71,10 @@
   <div id="player-container">
     <h2 id="now-playing-title">クリップを選択してください</h2>
     <p id="now-playing-info"></p>
+    
+    <!-- 備考を表示するエリアを追加 -->
+    <div id="now-playing-remarks"></div>
+    
     <div id="video-wrapper"></div>
   </div>
 
@@ -113,23 +98,32 @@
 
     function renderList(data) {
       const clipsDiv = document.getElementById('clips');
-      clipsDiv.innerHTML = ''; // クリア
+      clipsDiv.innerHTML = ''; 
 
-      // データの新しい順（下から上）に表示する場合は data.reverse() を挟む
       data.forEach(item => {
         const div = document.createElement('div');
         div.className = 'clip-item';
-        // フォームの実際の列名（ヘッダー）に合わせてプロパティを変更してください
         div.innerHTML = `<strong>${item['タイトル']}</strong><br>${item['チーム名']} / ${item['走者名']}`;
         
-        div.onclick = () => playVideo(item['クリップURL'], item['タイトル'], item['走者名']);
+        // onclickイベントに item['備考'] を追加で渡すように変更
+        div.onclick = () => playVideo(item['クリップURL'], item['タイトル'], item['走者名'], item['備考']);
         clipsDiv.appendChild(div);
       });
     }
 
-    function playVideo(url, title, runner) {
+    // 引数に remarks (備考) を追加
+    function playVideo(url, title, runner, remarks) {
       document.getElementById('now-playing-title').innerText = title;
       document.getElementById('now-playing-info').innerText = `走者: ${runner}`;
+      
+      // 備考の表示処理
+      const remarksDiv = document.getElementById('now-playing-remarks');
+      if (remarks && remarks.trim() !== "") {
+        remarksDiv.innerText = remarks;
+        remarksDiv.style.display = 'block'; // 備考があれば表示
+      } else {
+        remarksDiv.style.display = 'none';  // 備考が空なら隠す
+      }
       
       const embedUrl = getEmbedUrl(url);
       const wrapper = document.getElementById('video-wrapper');
@@ -137,13 +131,11 @@
       if (embedUrl) {
         wrapper.innerHTML = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
       } else {
-        wrapper.innerHTML = `<p>対応していないURLです: <a href="${url}" target="_blank">${url}</a></p>`;
+        wrapper.innerHTML = `<p style="color:white; padding:20px;">対応していないURLです: <a href="${url}" target="_blank" style="color:#66ccff;">${url}</a></p>`;
       }
     }
 
     function getEmbedUrl(rawUrl) {
-      // Twitchクリップの処理
-      // 例: https://clips.twitch.tv/AbcDefGhi または https://www.twitch.tv/channel/clip/AbcDefGhi
       if (rawUrl.includes('twitch.tv')) {
         const twitchMatch = rawUrl.match(/(?:clips\.twitch\.tv\/|clip\/)([^/?]+)/);
         if (twitchMatch) {
@@ -152,20 +144,11 @@
         }
       }
       
-      // YouTubeの処理 (通常の動画URL、短縮URLに対応)
-      // クリップ(youtube.com/clip/...) は通常のiframe埋め込みが不安定なため、
-      // 投稿者に「共有 > 埋め込む」の動画URLを貼ってもらうか、元の動画IDを抽出します。
       if (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')) {
         const ytMatch = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
         if (ytMatch) {
           const videoId = ytMatch[1];
           return `https://www.youtube.com/embed/${videoId}`;
-        }
-        
-        // YouTubeクリップURL（youtube.com/clip/xxx）の簡易対応
-        if (rawUrl.includes('/clip/')) {
-           // YouTubeクリップはそのまま埋め込むか、別途APIで元動画IDを引く必要があります。
-           // 手軽な回避策としてはURLをそのまま返す等ですが、iframeエラーになる確率が高いです。
         }
       }
       return null;
